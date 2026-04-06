@@ -33,9 +33,3 @@ AralDeck Online is a modern, web-based flashcard and quiz platform designed for 
 * **Rich Text:** CKEditor 5
 * **Auth:** Laravel UI & Socialite
 
-## 🚀 Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone [https://github.com/yourusername/araldeck.git](https://github.com/yourusername/araldeck.git)
-   cd araldeck
