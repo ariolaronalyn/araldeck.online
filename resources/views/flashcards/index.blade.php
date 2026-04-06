@@ -188,7 +188,7 @@
                             @endphp
 
                             {{-- LEFT SIDE: STUDY/ANSWER --}} 
-                            @if((int)$deck->user_id === (int)auth()->id() || auth()->user()->role === 'student' || $isCollaborator)
+                            @if(((int)$deck->user_id === (int)auth()->id() || auth()->user()->role === 'student' || $isCollaborator)  && request('view') != 'public' )
                                 <div class="d-flex gap-1">
                                     <button class="btn {{ $deck->has_progress ? 'btn-warning' : 'btn-primary' }} btn-sm px-3 rounded-pill shadow-sm" 
                                         onclick="startStudyDeck('{{ $deck->id }}', '{{ $deck->type }}')">
@@ -309,10 +309,17 @@
                     </div>
                 </div>
 
-                <div id="study-mode-ui">
+                <div id="study-mode-ui"> 
+
+                    <!-- <div id="study-topic" class="badge bg-secondary justify-content-center text-center  text-white mb-2" style="display: none;"></div> -->
+                     <div class="d-flex justify-content-center">
+                        <div id="study-topic" class="badge bg-secondary text-white mb-4" style="display: none;"> </div>
+                    </div>
+                               
                     <div id="format-success-msg" class="text-center small fw-bold text-success mb-2" style="display: none; height: 20px;">
                         <i class="bi bi-check-circle-fill"></i> Changes saved
                     </div>
+                     
                     <div class="d-flex justify-content-center gap-2 mb-3 p-2 bg-white rounded-pill shadow-sm border mx-auto" style="max-width: fit-content;">
                         <select class="form-select form-select-sm border-0 bg-light rounded-pill" id="font-family-select" style="width: 130px;">
                             <option value="'Georgia', serif" selected>Classic</option>
@@ -355,14 +362,18 @@
                     <div class="flashcard-container" >
                         <div class="flashcard-inner">
                             <div class="flashcard-front bg-white d-flex flex-column align-items-center justify-content-center p-5 text-center shadow-sm">
-                                <div id="study-topic" class="badge bg-info text-white mb-2" style="display: none;"></div>
-                                <small class="text-primary fw-bold mb-3 tracking-widest">QUESTION</small>
-                                 <div id="study-question" class="fw-normal fs-5"></div>
-                                <!-- <p class="text-muted mt-4 small"><i class="bi bi-arrow-repeat"></i> Click to reveal answer</p> -->
+                                <small class="text-muted fw-bold mb-3 tracking-widest">QUESTION</small>
+                                <div id="study-question" class="fw-normal fs-5 scrollable-content"></div>
                             </div>
-                            <div class="flashcard-back d-flex flex-column align-items-center justify-content-center p-5 text-center shadow-sm">
-                                <small class="text-light fw-bold mb-3 tracking-widest">ANSWER</small> 
-                                 <div id="study-answer" class="fw-normal fs-5"></div>
+                            <div class="flashcard-back d-flex flex-column p-5 text-center shadow-sm">
+                                <div class="question-section mb-4 text-center">
+                                    <small class="text-muted fw-bold mb-2 tracking-widest">QUESTION</small>
+                                    <div id="study-question-back" class="fw-normal fs-5 scrollable-content"></div>
+                                </div>
+                                <div class="answer-section">
+                                    <small class="text-light fw-bold mb-2 tracking-widest">ANSWER</small>
+                                    <div id="study-answer" class="fw-normal fs-5 scrollable-content"></div>
+                                </div>
                                 <p id="study-reference" class="mt-3 small opacity-75"></p>
                             </div>
                         </div>
@@ -483,6 +494,32 @@
 .bg-soft-primary { background-color: #e7f1ff; }
 .hover-shadow:hover { transform: translateY(-5px); transition: 0.3s; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
 .transition { transition: 0.3s ease; }
+/* Enhanced scrolling styles */
+.scrollable-content {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Visible scrollbar styling */
+.scrollable-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
 .flashcard-container { 
     perspective: 1500px; /* Increased for deeper 3D effect */
     width: 100%; 
@@ -500,7 +537,7 @@
 .flipped .flashcard-inner { transform: rotateY(180deg); }
 .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid #dee2e6; border-radius: 20px; }
 .flashcard-back {
-    /* Use !important to crush any leftover Bootstrap bg- classes */
+    /* Use !important to crush any leftover Bootstrap bg-classes */
     background-color: var(--card-bg-color) !important; 
     
     /* Contrast fix: Ensure text is readable */
@@ -509,14 +546,23 @@
     transform: rotateY(180deg);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    padding: 20px !important;
+    overflow-y: auto;
     border-radius: 20px;
-    padding: 20px;
     position: absolute;
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
+}
+
+/* Adjust flashcard layout for back side */
+.question-section, .answer-section {
+    width: 100%;
+    text-align: left;
+}
+
+.flashcard-back .scrollable-content {
+    text-align: justify;
 }
 
 /* Ensure text inside the back of the card inherits the dark color */
@@ -525,7 +571,6 @@
 .flashcard-back p {
     color: inherit !important;
 }
-.flashcard-back { transform: rotateY(180deg); }
 .flashcard-front img, 
 .flashcard-back img, 
 #quiz-question img {
@@ -536,21 +581,27 @@
     border-radius: 8px;
     margin-top: 10px;
 }
-.flashcard-front, .flashcard-back {
+.flashcard-front {
     overflow-y: auto;
     padding: 20px !important;
 }
-.flashcard-front::-webkit-scrollbar, 
-.flashcard-back::-webkit-scrollbar {
-    width: 0px;
+
+.flashcard-front::-webkit-scrollbar {
+    width: 6px;
 }
-.flashcard-front, .flashcard-back {
-    overflow-y: auto;
-    padding: 30px !important; /* Slightly more padding for better readability */
-    
-    /* Text Justification */
-    text-align: justify;
-    text-justify: inter-word;
+
+.flashcard-front::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.flashcard-front::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.flashcard-front::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 /* Apply Indentation (Tab) to the first paragraph or first line */
@@ -1179,27 +1230,31 @@ function renderStudyCard() {
         }
     }
 
-    // 4. Update Content
-    const questionEl = document.getElementById('study-question');
+    // 4. Update Content - Populate both question elements
+    const questionFront = document.getElementById('study-question');
+    const questionBack = document.getElementById('study-question-back');
     const answerEl = document.getElementById('study-answer');
     const referenceEl = document.getElementById('study-reference');
     const counterEl = document.getElementById('card-counter');
 
-    if (questionEl) questionEl.innerHTML = card.question;
+    if (questionFront) questionFront.innerHTML = card.question;
+    if (questionBack) questionBack.innerHTML = card.question;
     if (answerEl) answerEl.innerHTML = card.answer;
     if (referenceEl) referenceEl.innerText = card.reference ? 'Ref: ' + card.reference : '';
     if (counterEl) counterEl.innerText = `${currentIndex + 1} / ${currentDeck.length}`;
 
     // APPLY DEFAULT FONT STYLE
-    if (questionEl && answerEl) {
+    if (questionFront && questionBack && answerEl) {
         // Use the value currently selected in the dropdown, or default to Georgia
         const selectedFont = document.getElementById('font-family-select').value || "'Georgia', serif";
         
-        questionEl.style.fontFamily = selectedFont;
+        questionFront.style.fontFamily = selectedFont;
+        questionBack.style.fontFamily = selectedFont;
         answerEl.style.fontFamily = selectedFont;
         
         // Ensure the font size variable is also applied
-        questionEl.style.fontSize = currentFontSize + 'px';
+        questionFront.style.fontSize = currentFontSize + 'px';
+        questionBack.style.fontSize = currentFontSize + 'px';
         answerEl.style.fontSize = currentFontSize + 'px';
     }
 }
@@ -1474,23 +1529,28 @@ function adjustFontSize(delta) {
     
     document.getElementById('font-size-label').innerText = currentFontSize + 'px';
     
-    // Apply immediately to both
-    const q = document.getElementById('study-question');
+    // Apply immediately to all three content areas
+    const qFront = document.getElementById('study-question');
+    const qBack = document.getElementById('study-question-back');
     const a = document.getElementById('study-answer');
-    if(q) q.style.fontSize = currentFontSize + 'px';
+    if(qFront) qFront.style.fontSize = currentFontSize + 'px';
+    if(qBack) qBack.style.fontSize = currentFontSize + 'px';
     if(a) a.style.fontSize = currentFontSize + 'px';
 
     saveCurrentProgress();
 }
 
 document.getElementById('font-family-select').onchange = function() {
-    document.getElementById('study-question').style.fontFamily = this.value;
-    document.getElementById('study-answer').style.fontFamily = this.value;
+    const selectedFont = this.value;
+    document.getElementById('study-question').style.fontFamily = selectedFont;
+    document.getElementById('study-question-back').style.fontFamily = selectedFont;
+    document.getElementById('study-answer').style.fontFamily = selectedFont;
     saveCurrentProgress();
 };
 
 function setCardAlignment(align) {
     document.getElementById('study-question').style.textAlign = align;
+    document.getElementById('study-question-back').style.textAlign = align;
     document.getElementById('study-answer').style.textAlign = align;
     saveCurrentProgress();
 }
@@ -1519,10 +1579,18 @@ function saveFormattedCard() {
             [isFlipped ? 'answer' : 'question']: updatedHtml
         })
     }).then(() => {
-        // Update local memory
-        if(isFlipped) currentDeck[currentIndex].answer = updatedHtml;
-        else currentDeck[currentIndex].question = updatedHtml;
-        // alert("Formatting saved!");
+        // Update local memory for both question elements
+        if(isFlipped) {
+            currentDeck[currentIndex].answer = updatedHtml;
+        } else {
+            currentDeck[currentIndex].question = updatedHtml;
+            // Update both question elements to keep them in sync
+            const questionFront = document.getElementById('study-question');
+            const questionBack = document.getElementById('study-question-back');
+            if (questionFront) questionFront.innerHTML = updatedHtml;
+            if (questionBack) questionBack.innerHTML = updatedHtml;
+        }
+        
         // SHOW SUCCESS MESSAGE
             const msg = document.getElementById('format-success-msg');
             msg.style.display = 'block';
