@@ -182,37 +182,50 @@ class FlashcardViewController extends Controller
     }
     
     public function saveProgress(Request $request) {
-        // 1. Validation - Ensure deck_id is present
-        $request->validate([
-            'deck_id' => 'required'
-        ]);
+        try {
+            // 1. Validate - ensure deck_id is present
+            $request->validate([
+                'deck_id' => 'required'
+            ]);
 
-        // 2. Handle Reset/Retake
-        if (empty($request->deck_order) || $request->current_index == 0) {
-            \DB::table('deck_progress')
-                ->where('user_id', auth()->id())
-                ->where('deck_id', $request->deck_id) // Match by ID
-                ->delete();
-                
-            return response()->json(['status' => 'cleared_for_retake']);
+            // 2. Handle Reset (if index is 0 and order is empty)
+            if ($request->current_index == 0 && empty($request->deck_order)) {
+                DB::table('deck_progress')
+                    ->where('user_id', auth()->id())
+                    ->where('deck_id', $request->deck_id)
+                    ->delete();
+                    
+                return response()->json(['status' => 'cleared']);
+            }
+
+            // 3. Update or Insert
+            // IMPORTANT: Ensure your 'deck_progress' table has a 'deck_id' column
+            DB::table('deck_progress')->updateOrInsert(
+                [
+                    'user_id' => auth()->id(),
+                    'deck_id' => $request->deck_id,
+                ],
+                [
+                    'current_index' => $request->current_index,
+                    'font_family' => $request->font_family, // Save this
+                    'font_size' => $request->font_size,     // Save this
+                    'alignment' => $request->alignment,     // Save this
+                    'remaining_seconds' => $request->remaining_seconds ?? 0,
+                    'score' => $request->score ?? 0,
+                    'deck_order' => is_array($request->deck_order) ? json_encode($request->deck_order) : $request->deck_order,
+                    'updated_at' => now()
+                ]
+            );
+            
+            return response()->json(['status' => 'success']);
+
+        } catch (\Exception $e) {
+            // This will return the actual error message in JSON so you can see it in the console
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // 3. Save Progress
-        \DB::table('deck_progress')->updateOrInsert(
-            [
-                'user_id' => auth()->id(),
-                'deck_id' => $request->deck_id, // Match by ID
-            ],
-            [
-                'current_index' => $request->current_index,
-                'remaining_seconds' => $request->remaining_seconds,
-                'deck_order' => is_array($request->deck_order) ? json_encode($request->deck_order) : $request->deck_order,
-                'score' => $request->score,
-                'updated_at' => now()
-            ]
-        );
-        
-        return response()->json(['status' => 'saved']);
     }
 
     public function cloneDeck(Request $request)
@@ -360,9 +373,9 @@ class FlashcardViewController extends Controller
     {
         $request->validate([
             'id' => 'required|exists:flashcards,id',
-            'question' => 'required',
-            'answer' => 'required',
-            'difficulty' => 'required|in:easy,average,hard',
+            'question' => 'nullable|string', // Changed to nullable
+            'answer' => 'nullable|string',   // Changed to nullable
+            'difficulty' => 'nullable|in:easy,average,hard', // Changed to nullable
             'topic' => 'nullable|string|max:255'
         ]);
 
@@ -421,11 +434,13 @@ class FlashcardViewController extends Controller
             'average' => 'required|integer',
             'hard' => 'required|integer',
             'card_color' => 'required|string',
+            'highlight_colors' => 'nullable|array',
             'custom_labels' => 'nullable|string' // Add this to validation
         ]);
 
         $user = auth()->user();
         $user->card_color = $request->card_color;
+        $user->highlight_colors = $request->highlight_colors;
 
         // Convert "Label 1, Label 2" string into ['Label 1', 'Label 2'] array
         if ($request->has('custom_labels')) {

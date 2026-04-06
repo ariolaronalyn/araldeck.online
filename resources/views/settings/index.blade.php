@@ -60,6 +60,20 @@
                                     <span class="text-muted small">Choose the background color for flipped cards.</span>
                                 </div>
                             </div>
+                            
+                            <!-- HIGHLIGHTER COLOR SELECTION -->
+                            <h6 class="fw-bold mb-3 mt-4 text-uppercase small text-muted tracking-wide">Highlighter Palette (Select 5)</h6>
+                            <div class="d-flex gap-2 mb-3">
+                                @php 
+                                    $currentColors = auth()->user()->highlight_colors ?? ['#fff3cd', '#d4edda', '#cff4fc', '#f8d7da', '#e2e3e5'];
+                                @endphp
+                                @for($i = 0; $i < 5; $i++)
+                                    <input type="color" name="highlight_colors[]" class="form-control form-control-color border-0 shadow-sm" 
+                                        value="{{ $currentColors[$i] ?? '#ffffff' }}" title="Color {{ $i+1 }}">
+                                @endfor
+                            </div>
+                            <small class="text-muted d-block mb-4">These colors will appear in your study toolbar for highlighting text.</small>
+
                             <h6 class="fw-bold mb-3 text-uppercase small text-muted tracking-wide">Custom Review Labels</h6>
                             <div class="mb-3">
                                 <label class="form-label small">Manage Labels (Comma Separated)</label>

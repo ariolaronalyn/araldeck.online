@@ -271,7 +271,7 @@
 
 {{-- MODAL: STUDY/QUIZ --}}
 <div class="modal fade" id="studyModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header border-0 bg-light">
                 <h5 class="modal-title fw-bold" id="modalDeckTitle">Flashcards</h5>
@@ -310,18 +310,58 @@
                 </div>
 
                 <div id="study-mode-ui">
-                    <div class="flashcard-container" onclick="this.classList.toggle('flipped')">
+                    <div id="format-success-msg" class="text-center small fw-bold text-success mb-2" style="display: none; height: 20px;">
+                        <i class="bi bi-check-circle-fill"></i> Changes saved
+                    </div>
+                    <div class="d-flex justify-content-center gap-2 mb-3 p-2 bg-white rounded-pill shadow-sm border mx-auto" style="max-width: fit-content;">
+                        <select class="form-select form-select-sm border-0 bg-light rounded-pill" id="font-family-select" style="width: 130px;">
+                            <option value="'Georgia', serif" selected>Classic</option>
+                            <option value="'Inter', sans-serif">Standard</option>
+                            <option value="'Courier New', monospace">Monospace</option>
+                        </select>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-light rounded-circle mx-1" onclick="adjustFontSize(-2)"><i class="bi bi-dash"></i></button>
+                            <span class="align-self-center small fw-bold" id="font-size-label">18px</span>
+                            <button class="btn btn-sm btn-light rounded-circle mx-1" onclick="adjustFontSize(2)"><i class="bi bi-plus"></i></button>
+                        </div>
+
+                        <div class="vr mx-2"></div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-light" onclick="setCardAlignment('left')"><i class="bi bi-text-left"></i></button>
+                            <button class="btn btn-sm btn-light" onclick="setCardAlignment('center')"><i class="bi bi-text-center"></i></button>
+                            <button class="btn btn-sm btn-light" onclick="setCardAlignment('justify')"><i class="bi bi-justify"></i></button>
+                        </div>
+                    </div>
+
+                   <div id="text-toolbar" class="position-absolute bg-dark text-white rounded shadow p-1 d-none" style="z-index: 2000;">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-dark border-0" onclick="formatSelectedText('bold')"><i class="bi bi-type-bold"></i></button>
+                            <button class="btn btn-sm btn-dark border-0" onclick="formatSelectedText('underline')"><i class="bi bi-type-underline"></i></button>
+                            
+                           {{-- Dynamic Highlighter Colors from Settings --}}
+                            @foreach(auth()->user()->highlight_colors ?? ['#fff3cd', '#d4edda', '#cff4fc', '#f8d7da', '#e2e3e5'] as $color)
+                                <button class="btn btn-sm btn-dark border-0" onclick="formatSelectedText('highlight', '{{ $color }}')">
+                                    <i class="bi bi-circle-fill" style="color: {{ $color }}"></i>
+                                </button>
+                            @endforeach
+                            
+                            <button class="btn btn-sm btn-dark border-0 text-danger" onclick="formatSelectedText('clear')"><i class="bi bi-eraser"></i></button>
+                            <!-- <button class="btn btn-sm btn-primary border-0 ms-1 px-3" onclick="saveFormattedCard()"><i class="bi bi-check-square-fill"></i></button> -->
+                        </div>
+                    </div>
+                    <!-- <div class="flashcard-container" onclick="this.classList.toggle('flipped')"> -->
+                    <div class="flashcard-container" >
                         <div class="flashcard-inner">
                             <div class="flashcard-front bg-white d-flex flex-column align-items-center justify-content-center p-5 text-center shadow-sm">
                                 <div id="study-topic" class="badge bg-info text-white mb-2" style="display: none;"></div>
                                 <small class="text-primary fw-bold mb-3 tracking-widest">QUESTION</small>
-                                <!-- <h4 id="study-question" class="fw-normal"></h4> -->
                                  <div id="study-question" class="fw-normal fs-5"></div>
-                                <p class="text-muted mt-4 small"><i class="bi bi-arrow-repeat"></i> Click to reveal answer</p>
+                                <!-- <p class="text-muted mt-4 small"><i class="bi bi-arrow-repeat"></i> Click to reveal answer</p> -->
                             </div>
                             <div class="flashcard-back d-flex flex-column align-items-center justify-content-center p-5 text-center shadow-sm">
-                                <small class="text-light fw-bold mb-3 tracking-widest">ANSWER</small>
-                                <!-- <h4 id="study-answer" class="fw-normal"></h4> -->
+                                <small class="text-light fw-bold mb-3 tracking-widest">ANSWER</small> 
                                  <div id="study-answer" class="fw-normal fs-5"></div>
                                 <p id="study-reference" class="mt-3 small opacity-75"></p>
                             </div>
@@ -332,9 +372,13 @@
                         <button id="shuffle-btn" class="btn btn-outline-warning rounded-pill px-4 fw-bold" onclick="shuffleDeck()">
                             <i class="bi bi-shuffle"></i> Shuffle
                         </button>
+                        <button id="flip-btn" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" onclick="toggleFlip()">
+                            <i class="bi bi-arrow-repeat"></i> Flip
+                        </button>
                         <button class="btn btn-outline-primary rounded-pill px-4" onclick="nextCard()">Next <i class="bi bi-chevron-right"></i></button>
                     </div>
                 </div>
+                
 
                 <div id="quiz-mode-ui" style="display: none;">
                     <div class="bg-light p-4 rounded-4 mb-3 text-center min-vh-25">
@@ -439,8 +483,20 @@
 .bg-soft-primary { background-color: #e7f1ff; }
 .hover-shadow:hover { transform: translateY(-5px); transition: 0.3s; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
 .transition { transition: 0.3s ease; }
-.flashcard-container { perspective: 1000px; width: 100%; height: 400px; cursor: pointer; }
-.flashcard-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+.flashcard-container { 
+    perspective: 1500px; /* Increased for deeper 3D effect */
+    width: 100%; 
+    height: 650px;
+    cursor: pointer; 
+}
+
+.flashcard-inner { 
+    position: relative; 
+    width: 100%; 
+    height: 100%; 
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Snappy bounce effect */
+    transform-style: preserve-3d; 
+}
 .flipped .flashcard-inner { transform: rotateY(180deg); }
 .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid #dee2e6; border-radius: 20px; }
 .flashcard-back {
@@ -533,6 +589,36 @@
     font-size: 0.8rem;
     font-weight: 500;
 }
+
+#text-toolbar::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px 8px 0;
+    border-style: solid;
+    border-color: #212529 transparent transparent;
+}
+
+.highlight-red { background-color: #ffcccc; color: #b30000; padding: 0 2px; border-radius: 3px; }
+.underline-red { text-decoration: underline; text-decoration-color: red; text-underline-offset: 4px; }
+
+/* Dynamic Font Class */
+#study-question, #study-answer {
+    transition: font-size 0.2s ease, text-align 0.2s ease;
+}
+
+#format-success-msg {
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
 </style>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -558,7 +644,9 @@ let score = 0;
 let timer;
 let timeLeft = 0;
 let quizResults = [];
-let activeDeckId, activeDeckType; // Changed this line
+let activeDeckId, activeDeckType;
+let currentFontSize = 18;  
+
 
 // Initialize all Bootstrap tooltips on the page
 document.addEventListener('DOMContentLoaded', function () {
@@ -784,6 +872,13 @@ function startStudyDeck(deckId, deckType) {
                 currentIndex = parseInt(progress.current_index);
                 score = parseInt(progress.score);
                 timeLeft = parseInt(progress.remaining_seconds);
+                currentFontSize = parseInt(progress.font_size) || 18;
+                // Set the dropdown and alignment UI to match database
+                if(progress.font_family) document.getElementById('font-family-select').value = progress.font_family;
+                if(progress.alignment) setCardAlignment(progress.alignment);
+                
+                // Update the font size label in toolbar
+                document.getElementById('font-size-label').innerText = currentFontSize + 'px';
                 
                 if (progress.deck_order) {
                     try {
@@ -885,22 +980,60 @@ function submitQuizAnswer(isTimeout = false) {
 // 1. Keep ONLY this version of saveCurrentProgress
 function saveCurrentProgress() {
     if (!activeDeckId) return; 
-    
+
     const data = {
-        deck_id: activeDeckId, // Send the ID
-        current_index: currentIndex,
-        remaining_seconds: timeLeft,
-        score: score,
+        deck_id: activeDeckId,
+        current_index: currentIndex, 
+        font_family: document.getElementById('font-family-select').value,
+        font_size: currentFontSize,
+        alignment: document.getElementById('study-question').style.textAlign || 'justify',
+        remaining_seconds: timeLeft || 0,
+        score: score || 0,
         deck_order: currentDeck.map(c => c.id),
         _token: '{{ csrf_token() }}'
     };
     
     fetch("{{ route('decks.save_progress') }}", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json" // Force JSON response
+        },
         body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(d => {
+        console.log("Progress saved successfully");
+    })
+    .catch(e => {
+        console.error("Save Error:", e.message || e);
     });
 }
+
+
+// function saveCurrentProgress() {
+//     if (!activeDeckId) return; 
+    
+//     const data = {
+//         deck_id: activeDeckId, // Send the ID
+//         current_index: currentIndex,
+//         remaining_seconds: timeLeft,
+//         score: score,
+//         deck_order: currentDeck.map(c => c.id),
+//         _token: '{{ csrf_token() }}'
+//     };
+    
+//     fetch("{{ route('decks.save_progress') }}", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(data)
+//     });
+// }
 
 // 2. Update this to use activeDeckId as well
 function clearDeckProgressFromServer() {
@@ -963,17 +1096,70 @@ function finishQuiz() {
 
 
 
+// function renderStudyCard() {
+//     const card = currentDeck[currentIndex];
+    
+//     if (!card) return;
+//     // Remove flip animation for the new card
+//     // document.querySelector('.flashcard-container').classList.remove('flipped');
+//     const container = document.querySelector('.flashcard-container');
+//     if (container) {
+//         container.classList.remove('flipped');
+//     }
+
+//     // Reset all tag checkboxes first
+//     document.querySelectorAll('.tag-toggle-input').forEach(cb => cb.checked = false);
+
+//     // If the card has labels, check the corresponding boxes
+//     if (card.labels) {
+//         const labels = Array.isArray(card.labels) ? card.labels : JSON.parse(card.labels);
+//         labels.forEach(label => {
+//             const checkbox = document.querySelector(`.tag-toggle-input[value="${label}"]`);
+//             if (checkbox) checkbox.checked = true;
+//         });
+//     }
+//     // Handle Topic Display
+//     const topicEl = document.getElementById('study-topic');
+//     if (card.topic) {
+//         topicEl.innerText = card.topic;
+//         topicEl.style.display = 'inline-block';
+//     } else {
+//         topicEl.style.display = 'none';
+//     }
+//     // document.querySelector('.flashcard-container').classList.remove('flipped');
+//     // document.getElementById('study-question').innerHTML = card.question;
+//     // document.getElementById('study-answer').innerHTML = card.answer;
+//     // document.getElementById('study-reference').innerText = card.reference ? 'Ref: ' + card.reference : '';
+//     // document.getElementById('card-counter').innerText = `${currentIndex + 1} / ${currentDeck.length}`;
+//     const questionEl = document.getElementById('study-question');
+//     const answerEl = document.getElementById('study-answer');
+//     const referenceEl = document.getElementById('study-reference');
+//     const counterEl = document.getElementById('card-counter');
+
+//     if (questionEl) questionEl.innerHTML = card.question;
+//     if (answerEl) answerEl.innerHTML = card.answer;
+//     if (referenceEl) referenceEl.innerText = card.reference ? 'Ref: ' + card.reference : '';
+//     if (counterEl) counterEl.innerText = `${currentIndex + 1} / ${currentDeck.length}`;
+
+//     // Apply current font styles
+//     if (questionEl && answerEl) {
+//         questionEl.style.fontSize = currentFontSize + 'px';
+//         answerEl.style.fontSize = currentFontSize + 'px';
+//     }
+// }
+
 function renderStudyCard() {
     const card = currentDeck[currentIndex];
-    
     if (!card) return;
-    // Remove flip animation for the new card
-    document.querySelector('.flashcard-container').classList.remove('flipped');
 
-    // Reset all tag checkboxes first
+    // 1. ALWAYS reset to Front side when loading a new card
+    const container = document.querySelector('.flashcard-container');
+    if (container) {
+        container.classList.remove('flipped');
+    }
+
+    // 2. Reset and Apply Tag Checkboxes
     document.querySelectorAll('.tag-toggle-input').forEach(cb => cb.checked = false);
-
-    // If the card has labels, check the corresponding boxes
     if (card.labels) {
         const labels = Array.isArray(card.labels) ? card.labels : JSON.parse(card.labels);
         labels.forEach(label => {
@@ -981,19 +1167,41 @@ function renderStudyCard() {
             if (checkbox) checkbox.checked = true;
         });
     }
-    // Handle Topic Display
+
+    // 3. Handle Topic Display
     const topicEl = document.getElementById('study-topic');
-    if (card.topic) {
-        topicEl.innerText = card.topic;
-        topicEl.style.display = 'inline-block';
-    } else {
-        topicEl.style.display = 'none';
+    if (topicEl) {
+        if (card.topic) {
+            topicEl.innerText = card.topic;
+            topicEl.style.display = 'inline-block';
+        } else {
+            topicEl.style.display = 'none';
+        }
     }
-    document.querySelector('.flashcard-container').classList.remove('flipped');
-    document.getElementById('study-question').innerHTML = card.question;
-    document.getElementById('study-answer').innerHTML = card.answer;
-    document.getElementById('study-reference').innerText = card.reference ? 'Ref: ' + card.reference : '';
-    document.getElementById('card-counter').innerText = `${currentIndex + 1} / ${currentDeck.length}`;
+
+    // 4. Update Content
+    const questionEl = document.getElementById('study-question');
+    const answerEl = document.getElementById('study-answer');
+    const referenceEl = document.getElementById('study-reference');
+    const counterEl = document.getElementById('card-counter');
+
+    if (questionEl) questionEl.innerHTML = card.question;
+    if (answerEl) answerEl.innerHTML = card.answer;
+    if (referenceEl) referenceEl.innerText = card.reference ? 'Ref: ' + card.reference : '';
+    if (counterEl) counterEl.innerText = `${currentIndex + 1} / ${currentDeck.length}`;
+
+    // APPLY DEFAULT FONT STYLE
+    if (questionEl && answerEl) {
+        // Use the value currently selected in the dropdown, or default to Georgia
+        const selectedFont = document.getElementById('font-family-select').value || "'Georgia', serif";
+        
+        questionEl.style.fontFamily = selectedFont;
+        answerEl.style.fontFamily = selectedFont;
+        
+        // Ensure the font size variable is also applied
+        questionEl.style.fontSize = currentFontSize + 'px';
+        answerEl.style.fontSize = currentFontSize + 'px';
+    }
 }
 
 function filterDeckByLabel() {
@@ -1072,6 +1280,7 @@ function stripHtml(html) {
 function nextCard() {
     if (currentIndex < currentDeck.length - 1) { 
         currentIndex++; 
+        saveCurrentProgress(); // CRITICAL: This saves the "where you left off"
         renderStudyCard(); 
     }
 }
@@ -1079,6 +1288,7 @@ function nextCard() {
 function prevCard() {
     if (currentIndex > 0) { 
         currentIndex--; 
+        saveCurrentProgress(); // CRITICAL: This saves the "where you left off"
         renderStudyCard(); 
     }
 }
@@ -1196,6 +1406,141 @@ function startTaggedStudy() {
             // Show the Study Modal
             bootstrap.Modal.getOrCreateInstance(document.getElementById('studyModal')).show();
         });
+}
+
+
+//let currentFontSize = 18;
+
+// 1. Detect selection to show toolbar
+document.addEventListener('mouseup', function() {
+    const selection = window.getSelection();
+    const toolbar = document.getElementById('text-toolbar');
+    
+    if (selection.toString().length > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        toolbar.style.top = `${window.scrollY + rect.top - 50}px`;
+        toolbar.style.left = `${window.scrollX + rect.left + (rect.width / 2) - 60}px`;
+        toolbar.classList.remove('d-none');
+    } else {
+        toolbar.classList.add('d-none');
+    }
+});
+
+// 2. Format Selected Text
+function formatSelectedText(type, color = null) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || selection.toString().length === 0) return;
+    
+    const span = document.createElement('span');
+    const range = selection.getRangeAt(0);
+    if (type === 'clear') {
+        const content = range.extractContents();
+        range.insertNode(document.createTextNode(content.textContent));
+        window.getSelection().removeAllRanges();
+        
+        // AUTO-SAVE after clearing
+        saveFormattedCard(); 
+        return;
+    }
+    
+    if (type === 'highlight') {
+        span.style.backgroundColor = color;
+        span.style.padding = '0 2px';
+        span.style.borderRadius = '3px';
+        span.style.color = '#000'; // Ensure text is readable on light highlights
+    } else if (type === 'bold') {
+        span.style.fontWeight = 'bold';
+    } else if (type === 'underline') {
+        span.classList.add('underline-red');
+    } else if (type === 'clear') {
+        const content = range.extractContents();
+        range.insertNode(document.createTextNode(content.textContent));
+        return;
+    }
+
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    window.getSelection().removeAllRanges();
+    saveFormattedCard();
+}
+
+// 3. Persistent Card Styles (Alignment, Font, Size)
+function adjustFontSize(delta) {
+    currentFontSize += delta;
+    if(currentFontSize < 12) currentFontSize = 12; // safety
+    if(currentFontSize > 40) currentFontSize = 40; // safety
+    
+    document.getElementById('font-size-label').innerText = currentFontSize + 'px';
+    
+    // Apply immediately to both
+    const q = document.getElementById('study-question');
+    const a = document.getElementById('study-answer');
+    if(q) q.style.fontSize = currentFontSize + 'px';
+    if(a) a.style.fontSize = currentFontSize + 'px';
+
+    saveCurrentProgress();
+}
+
+document.getElementById('font-family-select').onchange = function() {
+    document.getElementById('study-question').style.fontFamily = this.value;
+    document.getElementById('study-answer').style.fontFamily = this.value;
+    saveCurrentProgress();
+};
+
+function setCardAlignment(align) {
+    document.getElementById('study-question').style.textAlign = align;
+    document.getElementById('study-answer').style.textAlign = align;
+    saveCurrentProgress();
+}
+
+// 4. Save the formatted text back to DB
+function saveFormattedCard() {
+    // Check if we are actually in study mode
+    if (activeDeckType !== 'study') {
+        alert("Formatting can only be saved in Study Mode.");
+        return;
+    }
+    const cardId = currentDeck[currentIndex].id;
+    const isFlipped = document.querySelector('.flashcard-container').classList.contains('flipped');
+    const updatedHtml = isFlipped ? 
+        document.getElementById('study-answer').innerHTML : 
+        document.getElementById('study-question').innerHTML;
+
+    fetch("{{ route('flashcards.update') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        },
+        body: JSON.stringify({
+            id: cardId,
+            [isFlipped ? 'answer' : 'question']: updatedHtml
+        })
+    }).then(() => {
+        // Update local memory
+        if(isFlipped) currentDeck[currentIndex].answer = updatedHtml;
+        else currentDeck[currentIndex].question = updatedHtml;
+        // alert("Formatting saved!");
+        // SHOW SUCCESS MESSAGE
+            const msg = document.getElementById('format-success-msg');
+            msg.style.display = 'block';
+            msg.style.opacity = '1';
+
+            // Hide it automatically after 2 seconds
+            setTimeout(() => {
+                msg.style.transition = 'opacity 0.5s ease';
+                msg.style.opacity = '0';
+                setTimeout(() => { msg.style.display = 'none'; }, 500);
+            }, 2000);
+    });
+}
+function toggleFlip() {
+    const container = document.querySelector('.flashcard-container');
+    if (container) {
+        container.classList.toggle('flipped');
+    }
 }
 </script>
 @endsection
