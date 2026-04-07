@@ -502,9 +502,11 @@
 .transition { transition: 0.3s ease; }
 /* Enhanced scrolling styles */
 .scrollable-content {
-    max-height: 200px;
+    width: 100%;
     overflow-y: auto;
-    padding-right: 10px;
+    word-wrap: break-word;
+    white-space: normal;
+    text-align: inherit; /* Respects the alignment buttons */
 }
 
 /* Visible scrollbar styling */
@@ -666,6 +668,11 @@
     transition: font-size 0.2s ease, text-align 0.2s ease;
 }
 
+/* Remove any fixed font sizes in CSS that might be blocking JS */
+#study-question, #study-question-back, #study-answer {
+    /* Don't set a font-size here, let JS handle it */
+    min-height: 50px;
+}
 #format-success-msg {
     font-size: 0.8rem;
     letter-spacing: 0.5px;
@@ -1293,6 +1300,18 @@ function renderStudyCard() {
         questionBack.style.fontSize = currentFontSize + 'px';
         answerEl.style.fontSize = currentFontSize + 'px';
     }
+
+    // APPLY STYLES TO ALL ELEMENTS
+    const targets = ['study-question', 'study-question-back', 'study-answer'];
+    const selectedFont = document.getElementById('font-family-select').value || "'Georgia', serif";
+
+    targets.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.style.fontFamily = selectedFont;
+            el.style.fontSize = currentFontSize + 'px';
+        }
+    });
 }
 
 function filterDeckByLabel() {
@@ -1568,18 +1587,18 @@ function formatSelectedText(type, color = null) {
 // 3. Persistent Card Styles (Alignment, Font, Size)
 function adjustFontSize(delta) {
     currentFontSize += delta;
-    if(currentFontSize < 12) currentFontSize = 12; // safety
-    if(currentFontSize > 40) currentFontSize = 40; // safety
+    if(currentFontSize < 10) currentFontSize = 10; 
+    if(currentFontSize > 50) currentFontSize = 50; 
     
-    document.getElementById('font-size-label').innerText = currentFontSize + 'px';
+    const label = document.getElementById('font-size-label');
+    if(label) label.innerText = currentFontSize + 'px';
     
-    // Apply immediately to all three content areas
-    const qFront = document.getElementById('study-question');
-    const qBack = document.getElementById('study-question-back');
-    const a = document.getElementById('study-answer');
-    if(qFront) qFront.style.fontSize = currentFontSize + 'px';
-    if(qBack) qBack.style.fontSize = currentFontSize + 'px';
-    if(a) a.style.fontSize = currentFontSize + 'px';
+    // Target by class to ensure all versions (front/back) are updated
+    const contents = document.querySelectorAll('.scrollable-content');
+    contents.forEach(el => {
+        el.style.setProperty('font-size', currentFontSize + 'px', 'important');
+        el.style.setProperty('line-height', '1.6', 'important');
+    });
 
     saveCurrentProgress();
 }
