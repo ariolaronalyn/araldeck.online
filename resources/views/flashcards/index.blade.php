@@ -300,8 +300,14 @@
             </div>
             
             <div class="modal-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-secondary px-3 py-2" id="card-counter">1 / 1</span>
+                <div class="d-flex justify-content-between align-items-center mb-3"> 
+                     <div class="dropdown">
+                        <button class="badge bg-secondary px-3 py-2 border-0 dropdown-toggle" type="button" id="card-counter" data-bs-toggle="dropdown" aria-expanded="false">
+                            1 / 1
+                        </button>
+                        <ul class="dropdown-menu shadow border-0" id="card-jump-list" style="max-height: 300px; overflow-y: auto;">
+                            </ul>
+                    </div>
                     <div id="quiz-timer-wrapper" style="display: none;">
                         <span class="badge bg-danger px-3 py-2">
                             <i class="bi bi-clock-history me-1"></i> <span id="timer-display">0</span>s
@@ -669,6 +675,20 @@
 @keyframes slideDown {
     from { transform: translateY(-10px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+}
+
+#card-counter.dropdown-toggle::after {
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+#card-counter:hover {
+    background-color: #495057 !important;
+    cursor: pointer;
+}
+
+.dropdown-item.active {
+    background-color: #0d6efd;
 }
 </style>
 
@@ -1236,6 +1256,22 @@ function renderStudyCard() {
     const answerEl = document.getElementById('study-answer');
     const referenceEl = document.getElementById('study-reference');
     const counterEl = document.getElementById('card-counter');
+    const jumpListEl = document.getElementById('card-jump-list');
+
+    // Populate the Jump List dropdown (only need to do this if list is empty or deck changed)
+    if (jumpListEl && jumpListEl.children.length !== currentDeck.length) {
+        jumpListEl.innerHTML = '';
+        currentDeck.forEach((_, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a class="dropdown-item ${index === currentIndex ? 'active' : ''}" href="#" onclick="jumpToCard(${index})">${index + 1}</a>`;
+            jumpListEl.appendChild(li);
+        });
+    } else if (jumpListEl) {
+        // Just update the active class if list already exists
+        Array.from(jumpListEl.querySelectorAll('.dropdown-item')).forEach((el, idx) => {
+            el.classList.toggle('active', idx === currentIndex);
+        });
+    }
 
     if (questionFront) questionFront.innerHTML = card.question;
     if (questionBack) questionBack.innerHTML = card.question;
@@ -1288,6 +1324,14 @@ function resetLabelFilter() {
     currentDeck = [...fullDeckCopy];
     currentIndex = 0;
     activeDeckType === 'quiz' ? renderQuizCard() : renderStudyCard();
+}
+
+function jumpToCard(index) {
+    if (index >= 0 && index < currentDeck.length) {
+        currentIndex = index;
+        renderStudyCard();
+        saveCurrentProgress(); // Autosave the new position
+    }
 }
 
 function liveUpdateLabel(checkbox) {
