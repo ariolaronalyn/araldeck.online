@@ -27,40 +27,48 @@
                         
                         <div class="mt-auto border-top pt-3 d-flex justify-content-between align-items-center">
                             <div class="d-flex gap-2">
-                                <button class="btn btn-primary btn-sm rounded-pill px-3" 
-                                    onclick="confirmStart('{{ $exam->id }}', '{{ $exam->name }}', {{ $exam->total_time_minutes }})">
-                                Take Exam
-                            </button>
+                                @php
+                                    // Check if user has a completed submission for this exam
+                                    $userSubmission = $exam->submissions->first();
+                                    $hasCompleted = $userSubmission && $userSubmission->status === 'completed';
+                                @endphp
 
-                            <div class="modal fade" id="startExamModal" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content border-0 shadow">
-                                        <div class="modal-body p-4 text-center">
-                                            <i class="bi bi-exclamation-triangle text-warning display-4"></i>
-                                            <h5 class="fw-bold mt-3" id="modal-exam-name">Ready to start?</h5>
-                                            <p class="text-muted small">
-                                                You have <span id="modal-exam-time" class="fw-bold"></span> minutes to complete this exam.
-                                            </p>
-                                            <div class="alert alert-warning border-0 small text-start">
-                                                <i class="bi bi-shield-lock-fill me-2"></i> <strong>Proctoring Enabled:</strong><br>
-                                                Your activity is logged. Leaving the browser tab or switching windows will be recorded and visible to the examiners.
-                                            </div>
-                                            <div class="d-grid gap-2">
-                                                <a href="" id="confirm-start-link" class="btn btn-primary rounded-pill">Start My Exam</a>
-                                                <button class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                                {{-- Dynamic Button Text --}}
+                                <button class="btn {{ $hasCompleted ? 'btn-outline-primary' : 'btn-primary' }} btn-sm rounded-pill px-3" 
+                                    onclick="confirmStart('{{ $exam->id }}', '{{ $exam->name }}', {{ $exam->total_time_minutes }}, {{ $hasCompleted ? 'true' : 'false' }})">
+                                    {{ $hasCompleted ? 'Re-take Exam' : 'Take Exam' }}
+                                </button>
+
+                                {{-- START EXAM MODAL (Keep one copy outside the loop or update IDs if inside) --}}
+                                <div class="modal fade" id="startExamModal" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow">
+                                            <div class="modal-body p-4 text-center">
+                                                <i id="modal-icon" class="bi bi-exclamation-triangle text-warning display-4"></i>
+                                                <h5 class="fw-bold mt-3" id="modal-exam-name">Ready to start?</h5>
+                                                <p class="text-muted small" id="modal-description">
+                                                    You have <span id="modal-exam-time" class="fw-bold"></span> minutes to complete this exam.
+                                                </p>
+                                                <div id="retake-warning" class="alert alert-info border-0 small text-start d-none">
+                                                    <i class="bi bi-info-circle-fill me-2"></i> <strong>Note:</strong> You have already completed this exam once. Re-taking it will create a new attempt record.
+                                                </div>
+                                                <div class="alert alert-warning border-0 small text-start">
+                                                    <i class="bi bi-shield-lock-fill me-2"></i> <strong>Proctoring Enabled:</strong><br>
+                                                    Your activity is logged. Leaving the browser tab or switching windows will be recorded.
+                                                </div>
+                                                <div class="d-grid gap-2">
+                                                    <a href="" id="confirm-start-link" class="btn btn-primary rounded-pill">Start My Exam</a>
+                                                    <button class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                                
-                                {{-- 2. Results visibility logic --}}
+
+                                {{-- Results visibility logic (unchanged) --}}
                                 @php
                                     $isTeacherOrAdmin = in_array(auth()->user()->role, ['teacher', 'admin', 'super_admin']);
                                     $isCreator = ($exam->user_id === auth()->id());
-                                    
-                                    // Logic: Show results if it's group type, OR if user is teacher/creator. 
-                                    // If type is 'class', students cannot see it.
                                     $canSeeResults = ($exam->type !== 'class') || $isTeacherOrAdmin || $isCreator;
                                 @endphp
 
@@ -69,7 +77,7 @@
                                 @endif
                             </div>
 
-                            {{-- MOVE THE EDIT BUTTON HERE --}}
+                            {{-- Edit button logic (unchanged) --}}
                             @if($exam->user_id === auth()->id() || auth()->user()->role === 'super_admin')
                                 <a href="{{ route('exams.edit', $exam->id) }}" class="btn btn-sm btn-light border rounded-circle" title="Edit Exam">
                                     <i class="bi bi-pencil-square text-secondary"></i>
@@ -89,10 +97,24 @@
 </div>
 
 <script>
-function confirmStart(id, name, time) {
-    document.getElementById('modal-exam-name').innerText = `Start ${name}?`;
+function confirmStart(id, name, time, isRetake) {
+    const modalTitle = document.getElementById('modal-exam-name');
+    const warningDiv = document.getElementById('retake-warning');
+    const modalIcon = document.getElementById('modal-icon');
+
+    if (isRetake) {
+        modalTitle.innerText = `Re-take ${name}?`;
+        warningDiv.classList.remove('d-none');
+        modalIcon.className = "bi bi-arrow-repeat text-primary display-4";
+    } else {
+        modalTitle.innerText = `Start ${name}?`;
+        warningDiv.classList.add('d-none');
+        modalIcon.className = "bi bi-exclamation-triangle text-warning display-4";
+    }
+
     document.getElementById('modal-exam-time').innerText = time;
     document.getElementById('confirm-start-link').href = `/exams/${id}/start`;
+    
     new bootstrap.Modal(document.getElementById('startExamModal')).show();
 }
 </script>

@@ -109,6 +109,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/exams/{id}/results', [App\Http\Controllers\ExamController::class, 'results'])->name('exams.results');
     Route::get('/exams/{id}/start', [App\Http\Controllers\ExamSubmissionController::class, 'start'])->name('exams.start');
     Route::get('/exams/{id}/edit', [ExamController::class, 'edit'])->name('exams.edit');
+    Route::post('/questions/{id}/update-ajax', [ExamQuestionController::class, 'updateAjax'])->name('questions.update_ajax');
     Route::put('/exams/{id}/update', [ExamController::class, 'update'])->name('exams.update');
 
     Route::post('/exams/log-incident', [ExamSubmissionController::class, 'logIncident'])->name('exams.log_incident');
@@ -122,6 +123,11 @@ Route::middleware(['auth'])->group(function () {
     // exam result per examinee
     Route::get('/exams/submissions/{id}/details', [ExamSubmissionController::class, 'showDetailedResults'])
     ->name('exams.submissions.details');
+ 
+
+    // Bulk Question Upload  
+    Route::get('/questions/bulk-upload', [ExamQuestionController::class, 'showUploadForm'])->name('questions.upload_form');
+    Route::get('/questions/download-template', [ExamQuestionController::class, 'downloadTemplate'])->name('questions.download_template'); 
 
 
     // Grading & Comments

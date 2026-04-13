@@ -115,9 +115,14 @@
             <div class="col-lg-8 d-none" id="question-pool-container">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold m-0">Question Pool <span class="text-danger small" id="selection-hint">*</span></h5>
-                    <a href="{{ route('questions.create') }}" class="btn btn-sm btn-outline-primary rounded-pill">
-                        <i class="bi bi-plus-circle"></i> Create New Question
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('questions.upload_form') }}" class="btn btn-sm btn-outline-success rounded-pill">
+                            <i class="bi bi-file-earmark-excel"></i> Upload Bulk
+                        </a>
+                        <a href="{{ route('questions.create') }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                            <i class="bi bi-plus-circle"></i> Create New Question
+                        </a>
+                    </div>
                 </div>
                     
                 <div class="input-group mb-3 shadow-sm">

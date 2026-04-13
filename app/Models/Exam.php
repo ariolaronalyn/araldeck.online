@@ -24,6 +24,11 @@ class Exam extends Model
         'allow_pause' => 'boolean'
     ];
 
+    public function submissions()
+    {
+        return $this->hasMany(ExamSubmission::class);
+    }
+
     public function assessmentType() {
         return $this->belongsTo(AssessmentType::class);
     }

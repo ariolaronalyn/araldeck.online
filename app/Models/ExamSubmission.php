@@ -23,7 +23,8 @@ class ExamSubmission extends Model
         'submitted_at' => 'datetime',
     ];
 
-    public function exam() {
+    public function exam()
+    {
         return $this->belongsTo(Exam::class);
     }
 

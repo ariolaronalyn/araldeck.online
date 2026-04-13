@@ -17,10 +17,14 @@ class ExamController extends Controller
 
         $exams = Exam::with(['assessmentType'])
             ->withCount('questions')
+            // Load the current user's submission for each exam
+            ->with(['submissions' => function($query) use ($userId) {
+                $query->where('user_id', $userId);
+            }])
             ->where(function($query) use ($userId) {
-                $query->where('user_id', $userId) // Exams I created
-                    ->orWhereJsonContains('collaborators', $userId) // Exams shared with me as Integer
-                    ->orWhereJsonContains('collaborators', (string)$userId); // Exams shared with me as String
+                $query->where('user_id', $userId)
+                    ->orWhereJsonContains('collaborators', $userId)
+                    ->orWhereJsonContains('collaborators', (string)$userId);
             })
             ->latest()
             ->get();

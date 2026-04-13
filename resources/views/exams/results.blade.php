@@ -19,6 +19,7 @@
             <table id="resultsTable" class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
+                        <th>Date Submitted</th>
                         <th>Student</th>
                         <th>Status</th>
                         <th>Score</th>
@@ -28,6 +29,14 @@
                 <tbody>
                     @foreach($submissions as $submission)
                     <tr>
+                        <td>
+                            @if($submission->submitted_at)
+                                <div class="small fw-bold">{{ $submission->submitted_at->format('M d, Y') }}</div>
+                                <div class="text-muted small" style="font-size: 0.75rem;">{{ $submission->submitted_at->format('h:i A') }}</div>
+                            @else
+                                <span class="text-muted small">Not submitted</span>
+                            @endif
+                        </td>
                         <td class="fw-bold">{{ $submission->user->name }}</td>
                         <td>
                             <span class="badge {{ $submission->status === 'completed' ? 'bg-success' : 'bg-warning' }} rounded-pill">
