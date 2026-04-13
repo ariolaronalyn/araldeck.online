@@ -45,6 +45,10 @@ class OnboardingController extends Controller
         // 2. Handle the "1 Day Free Trial" case
         if ($request->plan_id === 'trial') {
             $trialPlan = DB::table('subscription_plans')->where('promo_price', 0)->first();
+            // Add this check
+            if (!$trialPlan) {
+                return back()->with('error', 'Trial plan not found in database. Please contact support.');
+            }
 
             DB::table('user_subscriptions')->insert([
                 'user_id' => $user->id,

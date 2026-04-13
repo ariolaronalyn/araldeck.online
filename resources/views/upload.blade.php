@@ -1,5 +1,6 @@
 @extends('layouts.app')
 
+    <script src="https://cdn.ckeditor.com/ckeditor5/36.0.1/classic/ckeditor.js"></script>
 @section('content')
 <div class="container">
     <div class="row justify-content-center">

@@ -13,10 +13,15 @@ class ExamController extends Controller
      */
     public function index()
     {
-        // Get exams with the count of questions and the assessment type name
+        $userId = auth()->id();
+
         $exams = Exam::with(['assessmentType'])
             ->withCount('questions')
-            ->where('user_id', auth()->id()) // Or remove this if you want to show shared exams
+            ->where(function($query) use ($userId) {
+                $query->where('user_id', $userId) // Exams I created
+                    ->orWhereJsonContains('collaborators', $userId) // Exams shared with me as Integer
+                    ->orWhereJsonContains('collaborators', (string)$userId); // Exams shared with me as String
+            })
             ->latest()
             ->get();
 

@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\PDFExtractionController;
+use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamQuestionController;
+use App\Http\Controllers\ExamSubmissionController;
 
 // Public Routes
 Route::get('/', function () {
@@ -38,16 +41,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/flashcards/toggle-label', [FlashcardViewController::class, 'toggleLabel'])->name('flashcards.toggle_label');
 
     //PDF extraction
-
     Route::get('/extract-pdf', function () {
         return view('flashcards.extract_pdf');
     })->name('pdf.form');
     // Route::post('/extract-pdf', [PDFExtractionController::class, 'extract'])->name('pdf.extract');
     
-
-    // Inside your auth middleware group
-Route::get('/extract-pdf', [PDFExtractionController::class, 'showForm'])->name('pdf.form');
-Route::post('/extract-pdf', [PDFExtractionController::class, 'extract'])->name('pdf.extract');
+    // FOR pdf to excel conversion
+    Route::get('/extract-pdf', [PDFExtractionController::class, 'showForm'])->name('pdf.form');
+    Route::post('/extract-pdf', [PDFExtractionController::class, 'extract'])->name('pdf.extract');
     
     // Creation
     Route::get('/flashcards/create-bulk', [FlashcardViewController::class, 'createBulk'])->name('flashcards.create_bulk');
@@ -82,6 +83,50 @@ Route::post('/extract-pdf', [PDFExtractionController::class, 'extract'])->name('
     Route::post('/subscribe/resume', [FlashcardViewController::class, 'resumeSubscription'])->name('subscription.resume');
     Route::get('/subscribe/success/{plan_id}', [FlashcardViewController::class, 'handlePaymentSuccess'])->name('subscription.payment_success');
 
+
+    // Question Bank
+    Route::get('/question-bank', [ExamQuestionController::class, 'index'])->name('questions.index');
+    Route::post('/questions/clone/{id}', [ExamQuestionController::class, 'clone'])->name('questions.clone');
+    Route::post('/question-bank/store', [ExamQuestionController::class, 'store'])->name('questions.store');
+    Route::post('/questions/clone/{id}', [ExamQuestionController::class, 'clone'])->name('questions.clone');
+    Route::get('/users/check-email', function (Illuminate\Http\Request $request) {
+        $exists = \App\Models\User::where('email', $request->email)->exists();
+        return response()->json(['exists' => $exists]);
+    })->name('users.check_email');
+
+    Route::get('/question-bank/create', [ExamQuestionController::class, 'create'])->name('questions.create');
+    Route::post('/question-bank/store-bulk', [ExamQuestionController::class, 'storeBulk'])->name('questions.store_bulk');
+
+
+    // Exams
+    Route::resource('exams', ExamController::class);
+
+
+    // Taking the Exam
+    Route::get('/exams/{id}/start', [ExamSubmissionController::class, 'start'])->name('exams.start');
+    // Route::post('/exams/save-answer', [ExamSubmissionController::class, 'saveAnswer'])->name('exams.save_answer');
+    Route::post('/exams/pause', [ExamSubmissionController::class, 'pause'])->name('exams.pause');
+    Route::get('/exams/{id}/results', [App\Http\Controllers\ExamController::class, 'results'])->name('exams.results');
+    Route::get('/exams/{id}/start', [App\Http\Controllers\ExamSubmissionController::class, 'start'])->name('exams.start');
+    Route::get('/exams/{id}/edit', [ExamController::class, 'edit'])->name('exams.edit');
+    Route::put('/exams/{id}/update', [ExamController::class, 'update'])->name('exams.update');
+
+    Route::post('/exams/log-incident', [ExamSubmissionController::class, 'logIncident'])->name('exams.log_incident');
+
+    Route::post('/exams/save-answer', [ExamSubmissionController::class, 'saveAnswer'])->name('exams.save_answer');
+    Route::post('/exams/save-time', [ExamSubmissionController::class, 'saveTime'])->name('exams.save_time_log');
+
+    // Pause Exam
+    Route::post('/exams/pause', [ExamSubmissionController::class, 'pause'])->name('exams.pause');
+
+
+    // Grading & Comments
+    Route::post('/exams/grade', [ExamSubmissionController::class, 'updateGrade'])->name('exams.grade');
+    Route::post('/exams/comment', [ExamSubmissionController::class, 'addComment'])->name('exams.comment');
+
+    Route::post('/exams/submit', [ExamSubmissionController::class, 'finishSubmission'])->name('exams.submit');
+
+
     // --- Uploads (Restricted Roles) ---
     Route::middleware(['role:student,teacher,encoder,admin,super_admin'])->group(function () {
         Route::get('/upload', [FlashcardUploadController::class, 'index'])->name('csv.form');
@@ -95,6 +140,13 @@ Route::middleware(['auth', 'role:admin,super_admin'])->group(function () {
     Route::get('/admin/users', [AdminController::class, 'index'])->name('admin.users');
     Route::post('/admin/users/update', [AdminController::class, 'updateUser'])->name('admin.user.update');
     Route::post('/admin/impersonate/{id}', [AdminController::class, 'impersonate'])->name('admin.impersonate');
+
+    // Super Admin Settings : Exam
+    Route::post('/settings/assessment-types', function(Request $request) {
+        if(auth()->user()->role !== 'super_admin') abort(403);
+        \App\Models\AssessmentType::create(['name' => $request->name]);
+        return back();
+    })->name('settings.add_assessment_type');   
 });
 
 // --- Classroom (Shared: Student & Teacher) ---

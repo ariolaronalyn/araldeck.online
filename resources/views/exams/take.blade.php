@@ -28,6 +28,11 @@
 
     #empty-state { height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     .highlight-node { border-radius: 3px; padding: 0 2px; }
+
+    #pause-overlay {
+        backdrop-filter: blur(8px);
+        transition: opacity 0.3s ease;
+    }
 </style>
 
 <div id="text-toolbar">
@@ -353,13 +358,74 @@
     }
 
     function pauseExam() {
+        // Check if the timer is already stopped (already paused)
+        if (timerInterval === null && currentIndex !== null) {
+            resumeExam();
+            return;
+        }
+
         fetch("{{ route('exams.pause') }}", {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ submission_id: submissionId })
-        }).then(res => res.json()).then(data => {
-            if (data.allowed) { alert("Exam Paused."); } else { alert(data.message); }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.allowed) {
+                // 1. Stop the local timer
+                clearInterval(timerInterval);
+                timerInterval = null;
+
+                // 2. Update the remaining pauses UI
+                const limitEl = document.getElementById('pause-limit');
+                if(limitEl) limitEl.innerText = {{ $exam->pause_limit }} - data.count;
+
+                // 3. Show a Pause Overlay (Safety to prevent cheating)
+                showPauseOverlay();
+            } else {
+                alert(data.message);
+            }
         });
     }
+
+    function showPauseOverlay() {
+        // Create an overlay if it doesn't exist
+        let overlay = document.getElementById('pause-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'pause-overlay';
+            overlay.innerHTML = `
+                <div style="background: white; padding: 3rem; border-radius: 20px; text-align: center; shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                    <i class="bi bi-pause-circle-fill text-warning" style="font-size: 5rem;"></i>
+                    <h2 class="fw-bold mt-3">Exam Paused</h2>
+                    <p class="text-muted">Your time is currently frozen.</p>
+                    <button class="btn btn-primary btn-lg rounded-pill px-5 mt-3" onclick="resumeExam()">Resume Exam</button>
+                </div>
+            `;
+            // Style the overlay to cover the whole screen
+            Object.assign(overlay.style, {
+                position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                background: 'rgba(248, 249, 250, 0.98)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', zIndex: '9999'
+            });
+            document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'flex';
+    }
+
+    function resumeExam() {
+        const overlay = document.getElementById('pause-overlay');
+        if (overlay) overlay.style.display = 'none';
+        
+        // Restart the timer
+        startTimer();
+        questionStartTime = Date.now(); // Reset question timer to ignore pause duration
+    }
+
+
 </script>
 @endsection

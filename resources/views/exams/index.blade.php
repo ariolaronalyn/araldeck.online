@@ -3,11 +3,11 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold">Mock Exams</h4>
-        @if(in_array(auth()->user()->role, ['teacher', 'admin', 'super_admin']))
+        <!-- @if(in_array(auth()->user()->role, ['teacher', 'admin', 'super_admin'])) -->
             <a href="{{ route('exams.create') }}" class="btn btn-primary rounded-pill px-4">
                 <i class="bi bi-plus-lg"></i> Create New Exam
             </a>
-        @endif
+        <!-- @endif -->
         {{-- REMOVE THE EDIT BUTTON FROM HERE --}}
     </div>
 
@@ -54,7 +54,17 @@
                                 </div>
                             </div>
                                 
-                                @if($exam->type == 'group' || (auth()->user()->role == 'teacher'))
+                                {{-- 2. Results visibility logic --}}
+                                @php
+                                    $isTeacherOrAdmin = in_array(auth()->user()->role, ['teacher', 'admin', 'super_admin']);
+                                    $isCreator = ($exam->user_id === auth()->id());
+                                    
+                                    // Logic: Show results if it's group type, OR if user is teacher/creator. 
+                                    // If type is 'class', students cannot see it.
+                                    $canSeeResults = ($exam->type !== 'class') || $isTeacherOrAdmin || $isCreator;
+                                @endphp
+
+                                @if($canSeeResults)
                                     <a href="{{ route('exams.results', $exam->id) }}" class="btn btn-outline-secondary btn-sm rounded-pill">Results</a>
                                 @endif
                             </div>
