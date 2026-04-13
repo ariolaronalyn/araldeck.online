@@ -74,16 +74,29 @@
                                 <li class="nav-item mx-lg-2">
                                     <a class="nav-link px-3 rounded-pill {{ request()->routeIs('csv.form') ? 'bg-primary text-white active shadow-sm' : '' }}" href="{{ route('csv.form') }}">Bulk Upload</a>
                                 </li>
+
                                 
-                                {{-- Classroom Logic (Admins and Teachers) --}}
+                                {{-- Classroom & Exam Logic (Admins, Teachers, and Collaborative Students) --}}
                                 @php
                                     $showClassroom = false;
-                                    if($isAdmin || $userRole === 'teacher') {
+                                    if($isAdmin || $userRole === 'teacher' ) {
                                         $showClassroom = true;
                                     } elseif($userRole === 'student') {
-                                        $showClassroom = \DB::table('class_students')
-                                                        ->where('student_id', auth()->id())
+                                        $userId = auth()->id();
+
+                                        // 1. Check Classroom
+                                        $inClassroom = \DB::table('class_students')
+                                                        ->where('student_id', $userId)
                                                         ->exists();
+
+                                        // 2. Check Exam Collaborator (Try both Integer and String for JSON compatibility)
+                                        $isExamCollaborator = \DB::table('exams')
+                                                        ->where(function($query) use ($userId) {
+                                                            $query->whereJsonContains('collaborators', $userId)
+                                                                ->orWhereJsonContains('collaborators', (string)$userId);
+                                                        })->exists();
+
+                                        $showClassroom = $inClassroom || $isExamCollaborator;
                                     }
                                 @endphp
 
@@ -91,6 +104,11 @@
                                     <li class="nav-item mx-lg-2">
                                         <a class="nav-link px-3 rounded-pill {{ request()->routeIs('classroom.*') ? 'bg-primary text-white active shadow-sm' : '' }}" href="{{ route('classroom.index') }}">
                                             <i class="bi bi-mortarboard-fill me-1 {{ request()->routeIs('classroom.*') ? 'text-white' : 'text-primary' }}"></i> Classrooms
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {{ request()->routeIs('exams.*') ? 'active' : '' }}" href="{{ route('exams.index') }}">
+                                            <i class="bi bi-journal-text"></i> Exams
                                         </a>
                                     </li>
                                 @endif
