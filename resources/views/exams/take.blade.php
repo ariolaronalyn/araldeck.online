@@ -100,6 +100,7 @@
                         <div id="exam-question-text" class="mb-4" style="font-size: 18px; line-height: 1.8;"></div>
                         <hr>
                         <div class="mb-2 small fw-bold text-muted text-uppercase">Essay Answer</div>
+                        <span id="save-status" class="text-success small d-none"><i class="bi bi-cloud-check"></i> Saving...</span>
                          <textarea id="exam-answer-box"></textarea>
                     </div>
                 </div>
@@ -286,14 +287,18 @@
     }
 
     function debouncedSave() {
-        if (currentIndex === null || !editorInstance || isSystemChangingContent) return;
+        // 1. Guard: Ensure we aren't mid-question-switch and editor exists
+        if (isSystemChangingContent || currentIndex === null || !editorInstance) return;
+
+        // Show "Saving..." status
+        const statusEl = document.getElementById('save-status');
+        if (statusEl) statusEl.classList.remove('d-none');
 
         clearTimeout(window.saveTimer);
         window.saveTimer = setTimeout(() => {
-            const answer = editorInstance.getData();
             const currentQ = questions[currentIndex];
+            const answerData = editorInstance.getData();
             
-            // Safety: Ensure the question object and ID exist
             if (!currentQ || !currentQ.id) return;
 
             fetch("{{ route('exams.save_answer') }}", {
@@ -306,10 +311,28 @@
                 body: JSON.stringify({ 
                     submission_id: submissionId, 
                     question_id: currentQ.id, 
-                    answer_text: answer 
+                    answer_text: answerData 
                 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update UI to show saved
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="bi bi-check-all"></i> Saved';
+                    setTimeout(() => statusEl.classList.add('d-none'), 2000);
+                }
+                // Update sidebar to show 'answered' color
+                const navCircle = document.getElementById(`nav-${currentIndex}`);
+                if (navCircle) navCircle.classList.add('answered');
+                
+                // Keep local data in sync
+                questions[currentIndex].user_answer = answerData;
+            })
+            .catch(err => {
+                console.error("Save Error:", err);
+                if (statusEl) statusEl.innerHTML = '<span class="text-danger">Save Failed</span>';
             });
-        }, 2000);
+        }, 1500); // Save after 1.5 seconds of no typing
     }
 
     /**

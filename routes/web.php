@@ -119,6 +119,10 @@ Route::middleware(['auth'])->group(function () {
     // Pause Exam
     Route::post('/exams/pause', [ExamSubmissionController::class, 'pause'])->name('exams.pause');
 
+    // exam result per examinee
+    Route::get('/exams/submissions/{id}/details', [ExamSubmissionController::class, 'showDetailedResults'])
+    ->name('exams.submissions.details');
+
 
     // Grading & Comments
     Route::post('/exams/grade', [ExamSubmissionController::class, 'updateGrade'])->name('exams.grade');

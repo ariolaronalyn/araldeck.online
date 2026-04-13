@@ -41,19 +41,43 @@ class ExamSubmissionController extends Controller
 
     // TEACHER ONLY: Grade the Exam
     public function updateGrade(Request $request) {
-        if (auth()->user()->role !== 'teacher') abort(403);
+        $answer = ExamAnswer::with('submission.exam')->findOrFail($request->answer_id);
+        $submission = $answer->submission;
+        $exam = $submission->exam;
+        $userId = auth()->id();
 
-        $answer = ExamAnswer::findOrFail($request->answer_id);
+        // Permissions Logic
+        $isCreator = ($exam->user_id === $userId);
+        
+        // Check if user is a collaborator (handles JSON array from DB)
+        $collaborators = is_array($exam->collaborators) ? $exam->collaborators : json_decode($exam->collaborators, true) ?? [];
+        $isCollaborator = in_array($userId, $collaborators);
+
+        if ($exam->type === 'class') {
+            // ONLY the creator can grade 'class' exams
+            if (!$isCreator) {
+                return response()->json(['error' => 'Only the exam creator can grade class exams.'], 403);
+            }
+        } else {
+            // 'self' and 'group' allow creator AND collaborators
+            if (!$isCreator && !$isCollaborator) {
+                return response()->json(['error' => 'You do not have permission to grade this exam.'], 403);
+            }
+        }
+
+        // Apply the grade
         $answer->update(['points_given' => $request->points]);
 
         // Recalculate total score
-        $submission = $answer->submission;
         $submission->update([
             'total_score' => $submission->answers()->sum('points_given'),
             'status' => 'graded'
         ]);
 
-        return response()->json(['status' => 'Graded', 'total' => $submission->total_score]);
+        return response()->json([
+            'status' => 'Graded', 
+            'total' => $submission->total_score
+        ]);
     }
 
     // Group Study: Nested Comments
@@ -87,11 +111,11 @@ class ExamSubmissionController extends Controller
     }
  // Save Answer via AJAX (Autosave)
     public function saveAnswer(Request $request) {
-        // Validation to prevent 500 error if JS sends nulls
         if (!$request->submission_id || !$request->question_id) {
             return response()->json(['error' => 'Invalid IDs'], 422);
         }
 
+        // This will create the record if it doesn't exist, or update it if it does
         ExamAnswer::updateOrInsert(
             [
                 'exam_submission_id' => $request->submission_id,
@@ -102,6 +126,7 @@ class ExamSubmissionController extends Controller
                 'updated_at' => now()
             ]
         );
+
         return response()->json(['status' => 'Saved']);
     }
 
@@ -119,5 +144,20 @@ class ExamSubmissionController extends Controller
         ]);
 
         return response()->json(['status' => 'time saved']);
+    }
+
+    public function showDetailedResults($id) {
+        // Load submission with everything attached
+        $submission = ExamSubmission::with([
+            'user', 
+            'exam.questions', 
+            'exam.assessmentType',
+            'answers' // Load answers via the relationship we just added
+        ])->findOrFail($id);
+
+        // Key the answers by question ID for easy lookup in the blade
+        $answers = $submission->answers->keyBy('exam_question_id');
+
+        return view('exams.submission_details', compact('submission', 'answers'));
     }
 }
